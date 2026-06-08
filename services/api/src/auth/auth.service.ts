@@ -3,10 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+  private prisma: PrismaService,
+  private jwtService: JwtService,
+) {}
 
   async register(data: RegisterDto) {
     const existingUser = await this.prisma.user.findFirst({
@@ -34,14 +38,18 @@ export class AuthService {
       },
     });
 
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-    };
+    const payload = {
+  sub: user.id,
+  email: user.email,
+  username: user.username,
+};
+
+return {
+  accessToken: this.jwtService.sign(payload),
+};
   }
 
-  async login(data: LoginDto) {
+async login(data: LoginDto) {
   const user = await this.prisma.user.findUnique({
     where: {
       email: data.email,
@@ -61,10 +69,14 @@ export class AuthService {
     throw new BadRequestException('Invalid credentials');
   }
 
-  return {
-    id: user.id,
-    username: user.username,
+  const payload = {
+    sub: user.id,
     email: user.email,
+    username: user.username,
+  };
+
+  return {
+    accessToken: this.jwtService.sign(payload),
   };
 }
 }
