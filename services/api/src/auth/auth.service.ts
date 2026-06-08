@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -39,4 +40,31 @@ export class AuthService {
       email: user.email,
     };
   }
+
+  async login(data: LoginDto) {
+  const user = await this.prisma.user.findUnique({
+    where: {
+      email: data.email,
+    },
+  });
+
+  if (!user) {
+    throw new BadRequestException('Invalid credentials');
+  }
+
+  const passwordMatch = await bcrypt.compare(
+    data.password,
+    user.passwordHash,
+  );
+
+  if (!passwordMatch) {
+    throw new BadRequestException('Invalid credentials');
+  }
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+  };
+}
 }
